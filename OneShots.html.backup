@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="bootstrap/css/bootstrap-cyborg.css">
+    <link rel="stylesheet" href="css/extras.css">
+    <title>One Shots</title>
+</head>
+<body>
+    <div id="alert1"></div>
+    <div id="alert1" class="alert alert-primary alert-dismissible alert1 text-center mx-auto fixed-top" style="display: none;" role="alert">
+        <div id="alert1message">Lorem ipsum dolor, sit amet consectetur adipisicing elit. Debitis et tenetur molestias voluptas, cum deleniti asperiores reiciendis incidunt eos provident. Quis et esse molestias ullam eum reiciendis sint ex voluptatem!</div>
+        <button type="button" class="btn-close" style="right: 10px" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="container container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1>One Shots</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-2 col-sm-12">
+                <form id="oneshot" method="post">
+                    <div class="form-floating">
+                        <select name="host2" id="host2">
+                            <option value="http://localhost:8888">Surface</option>
+                            <option value="http://192.168.8.2:8888">Other Device</option>
+                        </select>
+                    </div>
+                    <!--<div class="form-floating">
+                        <input id="host" class="form-control" type="text" name="host" placeholder="LedFx Host" value="http://localhost:8888" required>
+                        <label for="host">LedFx Host</label>
+                    </div>-->
+                    <div class="form-floating">
+                        <input id="ramp" class="form-control" type="number" name="ramp" placeholder="ramp" min="0" value="10" required>
+                        <label for="ramp">Ramp</label>
+                    </div>
+                    <div class="form-floating">
+                        <input id="hold" class="form-control" type="number" name="hold" placeholder="ramp" min="0" value="500" required>
+                        <label for="hold">Hold</label>
+                    </div>
+                    <div class="form-floating">
+                        <input id="fade" class="form-control" type="number" name="fade" placeholder="fade" min="0" value="100" required>
+                        <label for="fade">Fade</label>
+                    </div>
+                    <div class="form-floating">
+                        <input id="color" class="form-control" style="height: 75px;" type="color" name="color" placeholder="color" min="0" value="100"
+                            required>
+                        <label for="color">Color</label>
+                    </div>
+                    <button class="btn btn-primary w-100 py-2" type="submit">Flash!</button>
+                    <div id="response" class="alert alert-success mx-auto text-center" role="alert"></div>
+                </form>
+            </div>
+            <div class="col-lg-1 col-6">
+                <button id="flash-button-black" class="flash-button flash-button-black" type="button">&nbsp;</button>
+                <button id="flash-button-white" class="flash-button flash-button-white" type="button">&nbsp;</button>
+                <button id="flash-button-red" class="flash-button flash-button-red" type="button">&nbsp;</button>
+                <button id="flash-button-orange" class="flash-button flash-button-orange" type="button">&nbsp;</button>
+                <button id="flash-button-yellow" class="flash-button flash-button-yellow" type="button">&nbsp;</button>
+            </div>
+            <div class="col-lg-1 col-6">
+                <button id="flash-button-green" class="flash-button flash-button-green" type="button">&nbsp;</button>
+                <button id="flash-button-blue" class="flash-button flash-button-blue" type="button">&nbsp;</button>
+                <button id="flash-button-purple" class="flash-button flash-button-purple" type="button">&nbsp;</button>
+                <button id="flash-button-pink" class="flash-button flash-button-pink" type="button">&nbsp;</button>
+            </div>
+        </div>
+
+    </div>
+
+
+
+    <script src="js/custom.js"></script>
+    <script src="bootstrap/js/bootstrap.js"></script>
+</body>
+</html>

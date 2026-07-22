@@ -1,0 +1,4571 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "LedFx REST API",
+    "version": "2.1.5",
+    "description": "OpenAPI description of the LedFx REST API, reconstructed from the project documentation.\n\nNotes:\n- Most endpoints return HTTP 200 for both success and failure, with status conveyed in the JSON body (snackbar-friendly). Inspect the `status` field.\n- Several endpoints accept request bodies on GET (e.g. /api/config, /api/schema/, /api/integrations) to request subsets; this is non-standard but matches LedFx behavior. Some HTTP clients/Postman support GET bodies.\n- WebSocket surfaces (/api/log WS upgrade, the /api/clients message protocol, and all event streams) are not fully modeled; OpenAPI does not describe WebSocket messaging.\n- Endpoints marked '(upcoming)' in the docs may not be implemented yet.",
+    "license": {
+      "name": "GPL-3.0",
+      "url": "https://github.com/LedFx/LedFx/blob/main/LICENSE"
+    },
+    "contact": {
+      "name": "LedFx",
+      "url": "https://github.com/LedFx/LedFx"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8888",
+      "description": "Default local instance"
+    },
+    {
+      "url": "http://{host}:{port}",
+      "description": "Custom host/port",
+      "variables": {
+        "host": {
+          "default": "localhost"
+        },
+        "port": {
+          "default": "8888"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Core"
+    },
+    {
+      "name": "Log"
+    },
+    {
+      "name": "Audio"
+    },
+    {
+      "name": "Schema"
+    },
+    {
+      "name": "Devices"
+    },
+    {
+      "name": "Effects"
+    },
+    {
+      "name": "Colors"
+    },
+    {
+      "name": "Virtuals"
+    },
+    {
+      "name": "Virtual Tools"
+    },
+    {
+      "name": "Scenes"
+    },
+    {
+      "name": "Playlists"
+    },
+    {
+      "name": "Integrations"
+    },
+    {
+      "name": "Assets"
+    },
+    {
+      "name": "Cache"
+    },
+    {
+      "name": "Images"
+    },
+    {
+      "name": "Now Playing"
+    },
+    {
+      "name": "Sendspin"
+    },
+    {
+      "name": "Clients"
+    }
+  ],
+  "paths": {
+    "/api/info": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Instance info & feature flags",
+        "responses": {
+          "200": {
+            "description": "LedFx instance information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Info"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Get configuration (full, or subset by key)",
+        "description": "No body returns the full config. Optionally POST/send a single key string or an array of keys to retrieve a subset. Permitted keys: host, port, port_s, dev_mode, configuration_version, scan_on_startup, visualisation_fps, visualisation_maxlen, audio, melbanks, wled_preferences, devices, virtuals, integrations, scenes, user_presets, ledfx_presets, flush_on_deactivate",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "example": [
+                "audio",
+                "devices",
+                "scenes"
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Update permitted config keys (may trigger restart)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {
+                "audio": {
+                  "min_volume": 0.3
+                },
+                "dev_mode": true,
+                "visualisation_fps": 50,
+                "port": 8080
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Set full config (restarts LedFx)",
+        "description": "Provide a full, valid config. LedFx restarts to apply.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Reset config to defaults and restart",
+        "description": "WARNING: irreversibly deletes all devices and settings.",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/log": {
+      "get": {
+        "tags": [
+          "Log"
+        ],
+        "summary": "Open WebSocket log stream (Upgrade)",
+        "description": "GET with WebSocket Upgrade. Streams backend log messages in real time (sends up to 30 recent on connect). OpenAPI cannot model the WS stream; documented for reference.",
+        "responses": {
+          "101": {
+            "description": "Switching Protocols (WebSocket)"
+          },
+          "200": {
+            "description": "Documented placeholder"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Log"
+        ],
+        "summary": "Post a log line",
+        "description": "ASCII only (non-ASCII stripped), max 200 chars, rate-limited 1/sec per IP.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                }
+              },
+              "example": {
+                "text": "Hello from frontend!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audio/devices": {
+      "get": {
+        "tags": [
+          "Audio"
+        ],
+        "summary": "List audio input devices",
+        "responses": {
+          "200": {
+            "description": "Device list and active index",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioDevices"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Audio"
+        ],
+        "summary": "Set active audio input device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "audio_device"
+                ],
+                "properties": {
+                  "audio_device": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "audio_device": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schema/": {
+      "get": {
+        "tags": [
+          "Schema"
+        ],
+        "summary": "Get JSON schemas (all or subset)",
+        "description": "Permitted: devices, effects, integrations, virtuals, audio, melbanks, wled_preferences, core",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "example": [
+                "devices",
+                "effects"
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schema object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schema/{schema_type}": {
+      "get": {
+        "tags": [
+          "Schema"
+        ],
+        "summary": "Get a specific schema",
+        "parameters": [
+          {
+            "name": "schema_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "devices",
+                "effects",
+                "integrations",
+                "virtuals",
+                "audio",
+                "melbanks",
+                "wled_preferences",
+                "core"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schema object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Get all devices",
+        "responses": {
+          "200": {
+            "description": "All device configs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Add a device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{device_id}": {
+      "parameters": [
+        {
+          "name": "device_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Get a device",
+        "responses": {
+          "200": {
+            "description": "Device info"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Modify a device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated device"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Delete a device",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/find_devices": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Find & add WLED devices on LAN",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/find_launchpad": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Find first Launchpad device",
+        "responses": {
+          "200": {
+            "description": "Found device or error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "status": "success",
+                  "device": "Launchpad X"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/find_openrgb": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "List OpenRGB devices (defaults 127.0.0.1:6742)",
+        "responses": {
+          "200": {
+            "description": "Device list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "List OpenRGB devices (custom server/port)",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "server": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "server": "1.2.3.4",
+                "port": 1234
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/get_nanoleaf_token": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Request Nanoleaf auth token (controller must be in pairing mode)",
+        "responses": {
+          "200": {
+            "description": "Auth token or error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "auth_token": "N7knmECvfRjo...1Gsn5K5HcxHy"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/effects": {
+      "get": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Get all effects",
+        "responses": {
+          "200": {
+            "description": "All effects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Bulk action: apply_global or apply_global_effect",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "action"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "apply_global"
+                        ]
+                      },
+                      "gradient": {
+                        "type": "string"
+                      },
+                      "background_color": {
+                        "type": "string"
+                      },
+                      "background_brightness": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0
+                      },
+                      "brightness": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0
+                      },
+                      "flip": {
+                        "oneOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "toggle"
+                            ]
+                          }
+                        ]
+                      },
+                      "mirror": {
+                        "oneOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "toggle"
+                            ]
+                          }
+                        ]
+                      },
+                      "virtuals": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "action",
+                      "type"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "apply_global_effect"
+                        ]
+                      },
+                      "virtuals": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "fallback": {
+                        "oneOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "number"
+                          }
+                        ],
+                        "nullable": true,
+                        "description": "Same semantics as per-virtual endpoints; null allowed."
+                      }
+                    }
+                  }
+                ]
+              },
+              "examples": {
+                "apply_global": {
+                  "value": {
+                    "action": "apply_global",
+                    "gradient": "Viridis"
+                  }
+                },
+                "apply_global_effect": {
+                  "value": {
+                    "action": "apply_global_effect",
+                    "type": "sparkle",
+                    "config": {
+                      "density": 0.5
+                    },
+                    "fallback": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Create effect (upcoming)",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/effects/{effect_id}": {
+      "parameters": [
+        {
+          "name": "effect_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Get an effect",
+        "responses": {
+          "200": {
+            "description": "Effect info"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Modify effect config (upcoming)",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated config"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Delete an effect (upcoming)",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/effects/{effect_id}/presets": {
+      "parameters": [
+        {
+          "name": "effect_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Get all presets for an effect",
+        "responses": {
+          "200": {
+            "description": "ledfx_presets and user_presets"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Rename a preset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preset_id": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "preset_id": "my_preset",
+                "category": "user_presets",
+                "name": "My Renamed Preset"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Delete a preset (user_presets only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preset_id": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "preset_id": "my_preset",
+                "category": "user_presets"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/effects/{effect_id}/presets/{preset_id}": {
+      "parameters": [
+        {
+          "name": "effect_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "preset_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Effects"
+        ],
+        "summary": "Delete a user preset (path params only)",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/colors": {
+      "get": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "Get all colors & gradients (builtin + user)",
+        "responses": {
+          "200": {
+            "description": "Colors and gradients",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "Create/update user colors or gradients",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "example": {
+                "my_red_color": "#ff0000",
+                "my_gradient": "linear-gradient(90deg, #ff0000, #0000ff)"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "Delete user colors/gradients (legacy, JSON body)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "example": [
+                "my_red_color",
+                "my_gradient"
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/colors/{color_id}": {
+      "parameters": [
+        {
+          "name": "color_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "Delete a specific color/gradient by ID",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals": {
+      "get": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Get all virtuals",
+        "responses": {
+          "200": {
+            "description": "All virtual configs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Add a virtual",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals/{virtual_id}": {
+      "parameters": [
+        {
+          "name": "virtual_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Get a virtual",
+        "responses": {
+          "200": {
+            "description": "Virtual info"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Set active/inactive",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "example": {
+                "active": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Update segments",
+        "description": "segments is a list of [device_id, start, end, invert].",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "segments": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {},
+                      "description": "[id, start, end, invert]"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "segments": [
+                  [
+                    "my_device",
+                    0,
+                    49,
+                    false
+                  ],
+                  [
+                    "my_other_device",
+                    0,
+                    99,
+                    false
+                  ]
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Delete a virtual",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals/{virtual_id}/effects": {
+      "parameters": [
+        {
+          "name": "virtual_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Get active effect config",
+        "responses": {
+          "200": {
+            "description": "Active effect config"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Update active effect config",
+        "description": "Config \"RANDOMIZE\" generates random values. Optional fallback param.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "config": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RANDOMIZE"
+                        ]
+                      }
+                    ]
+                  },
+                  "fallback": {
+                    "oneOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "description": "true (=300s), false, or float seconds."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Set a new effect",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "config": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "fallback": {
+                    "oneOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "description": "true (=300s), false, or float seconds."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Clear active effect",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals/{virtual_id}/fallback": {
+      "parameters": [
+        {
+          "name": "virtual_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Force fallback (cancel temporary effect)",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals/{virtual_id}/effects/delete": {
+      "parameters": [
+        {
+          "name": "virtual_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Remove an effect type from stored config",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "type": "energy2"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals/{virtual_id}/presets": {
+      "parameters": [
+        {
+          "name": "virtual_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Get presets for active effect (with active flag)",
+        "responses": {
+          "200": {
+            "description": "Presets with active flags"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Set active effect to a preset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "effect_id": {
+                    "type": "string"
+                  },
+                  "preset_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "category": "user_presets",
+                "effect_id": "wavelength",
+                "preset_id": "my_wavelength_preset"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Save active effect as a custom preset",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Virtuals"
+        ],
+        "summary": "Clear effect of a virtual",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals_tools": {
+      "post": {
+        "tags": [
+          "Virtual Tools"
+        ],
+        "summary": "Add oneshot to all virtuals",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tool": {
+                    "type": "string",
+                    "enum": [
+                      "oneshot"
+                    ]
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "ramp": {
+                    "type": "integer"
+                  },
+                  "hold": {
+                    "type": "integer"
+                  },
+                  "fade": {
+                    "type": "integer"
+                  },
+                  "brightness": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "tool": "oneshot",
+                "color": "white",
+                "ramp": 10,
+                "hold": 200,
+                "fade": 2000,
+                "brightness": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Virtual Tools"
+        ],
+        "summary": "force_color or oneshot (all virtuals)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "examples": {
+                "force_color": {
+                  "value": {
+                    "tool": "force_color",
+                    "color": "blue"
+                  }
+                },
+                "oneshot_disable": {
+                  "value": {
+                    "tool": "oneshot"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/virtuals_tools/{virtual_id}": {
+      "parameters": [
+        {
+          "name": "virtual_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Virtual Tools"
+        ],
+        "summary": "Add oneshot to a specific virtual",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tool": {
+                    "type": "string",
+                    "enum": [
+                      "oneshot"
+                    ]
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "ramp": {
+                    "type": "integer"
+                  },
+                  "hold": {
+                    "type": "integer"
+                  },
+                  "fade": {
+                    "type": "integer"
+                  },
+                  "brightness": {
+                    "type": "number"
+                  }
+                }
+              },
+              "example": {
+                "tool": "oneshot",
+                "color": "white",
+                "ramp": 10,
+                "hold": 200,
+                "fade": 2000,
+                "brightness": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Virtual Tools"
+        ],
+        "summary": "force_color, calibration, highlight, oneshot, or copy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "examples": {
+                "force_color": {
+                  "value": {
+                    "tool": "force_color",
+                    "color": "#FFFFFF"
+                  }
+                },
+                "calibration": {
+                  "value": {
+                    "tool": "calibration",
+                    "mode": "on"
+                  }
+                },
+                "highlight": {
+                  "value": {
+                    "tool": "highlight",
+                    "device": "falcon1",
+                    "start": 2019,
+                    "stop": 2451,
+                    "flip": true
+                  }
+                },
+                "oneshot": {
+                  "value": {
+                    "tool": "oneshot",
+                    "color": "white",
+                    "ramp": 10,
+                    "hold": 200,
+                    "fade": 2000,
+                    "brightness": 1
+                  }
+                },
+                "copy": {
+                  "value": {
+                    "tool": "copy",
+                    "target": [
+                      "my_virtual1",
+                      "my_virtual2"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scenes": {
+      "get": {
+        "tags": [
+          "Scenes"
+        ],
+        "summary": "List all scenes (with active flags)",
+        "responses": {
+          "200": {
+            "description": "All scenes"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Scenes"
+        ],
+        "summary": "Create or update a scene",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Scene"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Scenes"
+        ],
+        "summary": "Control: activate / deactivate / activate_in / rename",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "action"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "activate",
+                      "deactivate",
+                      "activate_in",
+                      "rename"
+                    ]
+                  },
+                  "ms": {
+                    "type": "integer",
+                    "description": "Required for activate_in."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Required for rename."
+                  }
+                }
+              },
+              "examples": {
+                "activate": {
+                  "value": {
+                    "id": "living-room",
+                    "action": "activate"
+                  }
+                },
+                "activate_in": {
+                  "value": {
+                    "id": "living-room",
+                    "action": "activate_in",
+                    "ms": 5000
+                  }
+                },
+                "deactivate": {
+                  "value": {
+                    "id": "living-room",
+                    "action": "deactivate"
+                  }
+                },
+                "rename": {
+                  "value": {
+                    "id": "living-room",
+                    "action": "rename",
+                    "name": "Cozy Living Room"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Scenes"
+        ],
+        "summary": "Delete a scene (legacy, JSON body)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": "test-scene"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scenes/{scene_id}": {
+      "parameters": [
+        {
+          "name": "scene_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Scenes"
+        ],
+        "summary": "Get scene details",
+        "responses": {
+          "200": {
+            "description": "Scene detail"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Scenes"
+        ],
+        "summary": "Delete a scene (RESTful)",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists": {
+      "get": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "List all playlists",
+        "responses": {
+          "200": {
+            "description": "All playlists"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Create or replace (upsert) a playlist",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Playlist"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Control: start / stop / pause / resume / next / prev / state",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Required for start."
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "start",
+                      "stop",
+                      "pause",
+                      "resume",
+                      "next",
+                      "prev",
+                      "state"
+                    ]
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "sequence",
+                      "shuffle"
+                    ],
+                    "description": "Optional runtime override for start."
+                  },
+                  "timing": {
+                    "$ref": "#/components/schemas/PlaylistTiming"
+                  }
+                }
+              },
+              "examples": {
+                "start": {
+                  "value": {
+                    "id": "evening-cycle",
+                    "action": "start"
+                  }
+                },
+                "start_shuffle": {
+                  "value": {
+                    "id": "evening-cycle",
+                    "action": "start",
+                    "mode": "shuffle"
+                  }
+                },
+                "stop": {
+                  "value": {
+                    "action": "stop"
+                  }
+                },
+                "pause": {
+                  "value": {
+                    "action": "pause"
+                  }
+                },
+                "resume": {
+                  "value": {
+                    "action": "resume"
+                  }
+                },
+                "next": {
+                  "value": {
+                    "action": "next"
+                  }
+                },
+                "state": {
+                  "value": {
+                    "action": "state"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Delete a playlist (legacy, JSON body)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": "evening-cycle"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Get playlist details",
+        "responses": {
+          "200": {
+            "description": "Playlist detail"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Delete a playlist (RESTful)",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Get integrations info",
+        "description": "Optional body {\"info\": <field>} where field is one of id, type, active, status, data, config.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "info": "status"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Integrations info"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Toggle an integration on/off",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": "myqlc"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Create or update an integration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "config": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              },
+              "example": {
+                "type": "qlc",
+                "config": {
+                  "description": "QLC Test",
+                  "ip_address": "127.0.0.1",
+                  "name": "myQLC+",
+                  "port": 9999
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Delete an integration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "id": "myqlc"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/qlc/{integration_id}": {
+      "parameters": [
+        {
+          "name": "integration_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Get QLC+ info",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "string",
+                    "enum": [
+                      "event_types",
+                      "qlc_widgets",
+                      "qlc_listeners"
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "info": "qlc_listeners"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "QLC+ info"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Toggle a QLC+ event listener",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {
+                "event_type": "scene_set",
+                "event_filter": {
+                  "scene_name": "My Scene"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Add/update a QLC+ listener & payload",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {
+                "event_type": "scene_set",
+                "event_filter": {
+                  "scene_name": "My Scene"
+                },
+                "qlc_payload": {
+                  "0": 255,
+                  "1": 255,
+                  "2": 169
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Delete a QLC+ listener",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {
+                "event_type": "scene_set",
+                "event_filter": {
+                  "scene_name": "My Scene"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/spotify/{integration_id}": {
+      "parameters": [
+        {
+          "name": "integration_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Get Spotify song triggers",
+        "responses": {
+          "200": {
+            "description": "Song triggers"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Update a song trigger (TODO)",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Create a song trigger",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {
+                "scene_id": "my_scene",
+                "song_id": "347956287364597",
+                "song_name": "Really Cool Song",
+                "song_position": "43764"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Delete a song trigger",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "trigger_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "trigger_id": "Really Cool Song - 43764"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "List user assets",
+        "responses": {
+          "200": {
+            "description": "User assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Upload an asset (multipart)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "path"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "path": {
+                    "type": "string",
+                    "example": "icons/led.png"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Delete a user asset",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "path": "icons/led.png"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets_fixed": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "List built-in assets (read-only)",
+        "responses": {
+          "200": {
+            "description": "Built-in assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/download": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Download an asset (query param)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User path, builtin:// prefix, or http(s):// URL."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary image or JSON error (HTTP 200)",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Download an asset (JSON body)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "path": "builtin://skull.gif"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Binary image or JSON error (HTTP 200)",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/thumbnail": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Get asset thumbnail (query params)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 16,
+              "maximum": 512,
+              "default": 128
+            }
+          },
+          {
+            "name": "dimension",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "max",
+                "width",
+                "height"
+              ],
+              "default": "max"
+            }
+          },
+          {
+            "name": "animated",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "force_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thumbnail image or JSON error (HTTP 200)",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Get asset thumbnail (JSON body)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 16,
+                    "maximum": 512,
+                    "default": 128
+                  },
+                  "dimension": {
+                    "type": "string",
+                    "enum": [
+                      "max",
+                      "width",
+                      "height"
+                    ],
+                    "default": "max"
+                  },
+                  "animated": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "force_refresh": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              },
+              "example": {
+                "path": "backgrounds/galaxy.jpg",
+                "size": 256,
+                "dimension": "width"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thumbnail image or JSON error (HTTP 200)",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cache/images": {
+      "get": {
+        "tags": [
+          "Cache"
+        ],
+        "summary": "Get cache statistics",
+        "responses": {
+          "200": {
+            "description": "Cache stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheStats"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cache"
+        ],
+        "summary": "Clear cache (specific URL or entire)",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "all_variants",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cleared counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cache/images/refresh": {
+      "post": {
+        "tags": [
+          "Cache"
+        ],
+        "summary": "Refresh (clear & re-download) a cached image",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "all_variants": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              },
+              "example": {
+                "url": "https://example.com/image.gif",
+                "all_variants": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/get_image": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Retrieve an image as base64 JPEG",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetImageRequest"
+              },
+              "example": {
+                "path_url": "https://example.com/image.gif"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Base64 JPEG or error (HTTP 200)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/get_gif_frames": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Extract GIF/animated frames as base64 JPEGs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetImageRequest"
+              },
+              "example": {
+                "path_url": "https://example.com/animated.gif"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "frame_count + frames[] or error (HTTP 200)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/now-playing": {
+      "get": {
+        "tags": [
+          "Now Playing"
+        ],
+        "summary": "Get now-playing state",
+        "responses": {
+          "200": {
+            "description": "Playback state, artwork, gradients, config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Now Playing"
+        ],
+        "summary": "Update now-playing configuration (partial/full)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NowPlayingConfig"
+              },
+              "example": {
+                "gradient": {
+                  "enabled": true,
+                  "variant": "led_punchy",
+                  "virtual_ids": [
+                    "wled-living-room"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sendspin/servers": {
+      "get": {
+        "tags": [
+          "Sendspin"
+        ],
+        "summary": "List Sendspin servers",
+        "responses": {
+          "200": {
+            "description": "Servers map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/SendspinServer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sendspin"
+        ],
+        "summary": "Add a Sendspin server",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "server_url"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "server_url": {
+                    "type": "string"
+                  },
+                  "client_name": {
+                    "type": "string",
+                    "default": "LedFx"
+                  }
+                }
+              },
+              "example": {
+                "id": "living-room",
+                "server_url": "ws://192.168.1.12:8927/sendspin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sendspin/servers/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "put": {
+        "tags": [
+          "Sendspin"
+        ],
+        "summary": "Update a Sendspin server",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendspinServer"
+              },
+              "example": {
+                "server_url": "ws://192.168.1.20:8927/sendspin",
+                "client_name": "LedFx-Updated"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Sendspin"
+        ],
+        "summary": "Delete a Sendspin server",
+        "responses": {
+          "200": {
+            "description": "Response (HTTP 200 for all outcomes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorEnvelope"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sendspin/discover": {
+      "get": {
+        "tags": [
+          "Sendspin"
+        ],
+        "summary": "Discover Sendspin servers via mDNS",
+        "parameters": [
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0.1,
+              "maximum": 30.0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discovered servers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clients": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Get active WebSocket client metadata",
+        "description": "Returns a map of client UID -> metadata. (The broader /api/clients client-management surface is a WebSocket message protocol not modeled here.)",
+        "responses": {
+          "200": {
+            "description": "Client metadata map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/ClientMetadata"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SnackbarPayload": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "success",
+              "info",
+              "warning",
+              "error"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "SuccessEnvelope": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "success"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SnackbarPayload"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "failed"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SnackbarPayload"
+          }
+        }
+      },
+      "Info": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "github_sha": {
+            "type": "string"
+          },
+          "is_release": {
+            "type": "string"
+          },
+          "developer_mode": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "object",
+            "properties": {
+              "sendspin": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "AudioDevices": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "active_device_index": {
+            "type": "integer"
+          },
+          "devices": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AssetMetadata": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "n_frames": {
+            "type": "integer"
+          },
+          "is_animated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AssetList": {
+        "type": "object",
+        "properties": {
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetMetadata"
+            }
+          }
+        }
+      },
+      "CacheEntry": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "cached_at": {
+            "type": "string"
+          },
+          "last_accessed": {
+            "type": "string"
+          },
+          "access_count": {
+            "type": "integer"
+          },
+          "file_size": {
+            "type": "integer"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "format": {
+            "type": "string"
+          },
+          "n_frames": {
+            "type": "integer"
+          },
+          "is_animated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CacheStats": {
+        "type": "object",
+        "properties": {
+          "total_size": {
+            "type": "integer"
+          },
+          "total_count": {
+            "type": "integer"
+          },
+          "max_size": {
+            "type": "integer"
+          },
+          "max_count": {
+            "type": "integer"
+          },
+          "cache_policy": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CacheEntry"
+            }
+          }
+        }
+      },
+      "SendspinServer": {
+        "type": "object",
+        "properties": {
+          "server_url": {
+            "type": "string",
+            "example": "ws://192.168.1.12:8927/sendspin",
+            "description": "Must start with ws:// or wss://"
+          },
+          "client_name": {
+            "type": "string",
+            "default": "LedFx"
+          }
+        }
+      },
+      "PlaylistItem": {
+        "type": "object",
+        "required": [
+          "scene_id"
+        ],
+        "properties": {
+          "scene_id": {
+            "type": "string"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 500
+          }
+        }
+      },
+      "PlaylistTiming": {
+        "type": "object",
+        "properties": {
+          "jitter": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "factor_min": {
+                "type": "number",
+                "minimum": 0.0,
+                "default": 1.0
+              },
+              "factor_max": {
+                "type": "number",
+                "minimum": 0.0,
+                "default": 1.0
+              }
+            }
+          }
+        }
+      },
+      "Playlist": {
+        "type": "object",
+        "required": [
+          "name",
+          "items"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional on create; slug-generated from name if omitted."
+          },
+          "name": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaylistItem"
+            }
+          },
+          "default_duration_ms": {
+            "type": "integer",
+            "minimum": 500
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "sequence",
+              "shuffle"
+            ],
+            "default": "sequence"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/PlaylistTiming"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "VirtualAction": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "ignore",
+              "stop",
+              "forceblack",
+              "activate"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "Required when action=activate."
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Required when action=activate unless preset is provided."
+          },
+          "preset": {
+            "type": "string",
+            "description": "Alternative to config; requires type."
+          }
+        }
+      },
+      "Scene": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Omit on create; required on update."
+          },
+          "name": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "boolean",
+            "default": false
+          },
+          "virtuals": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/VirtualAction"
+            }
+          },
+          "scene_image": {
+            "type": "string",
+            "default": "Wallpaper"
+          },
+          "scene_tags": {
+            "type": "string",
+            "nullable": true
+          },
+          "scene_puturl": {
+            "type": "string",
+            "nullable": true
+          },
+          "scene_payload": {
+            "type": "string",
+            "nullable": true
+          },
+          "scene_midiactivate": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          }
+        }
+      },
+      "NowPlayingConfig": {
+        "type": "object",
+        "properties": {
+          "gradient": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "variant": {
+                "type": "string",
+                "enum": [
+                  "led_safe",
+                  "led_punchy",
+                  "led_max"
+                ],
+                "default": "led_punchy"
+              },
+              "virtual_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "track_text": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "default": false
+              },
+              "duration": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60,
+                "default": 8
+              },
+              "virtual_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "preset": {
+                "type": "string",
+                "default": ""
+              }
+            }
+          },
+          "album_art": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "default": false
+              },
+              "duration": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60,
+                "default": 10
+              },
+              "virtual_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "GetImageRequest": {
+        "type": "object",
+        "required": [
+          "path_url"
+        ],
+        "properties": {
+          "path_url": {
+            "type": "string",
+            "description": "Remote http(s) URL or local file path within config/assets dir."
+          }
+        }
+      },
+      "ClientMetadata": {
+        "type": "object",
+        "properties": {
+          "ip": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "controller",
+              "visualiser",
+              "mobile",
+              "display",
+              "api",
+              "unknown"
+            ]
+          },
+          "device_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "connected_at": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

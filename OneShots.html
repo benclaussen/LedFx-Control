@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="bootstrap/css/bootstrap-cyborg.css">
+    <link rel="stylesheet" href="css/extras.css">
+    <title>One Shots</title>
+</head>
+
+<body>
+    <div class="container container-fluid py-3">
+
+        <div class="row g-4">
+            <!-- Controls -->
+            <div class="col-lg-4 col-md-5 col-12">
+                <div class="form-floating mb-3">
+                    <select class="form-select" name="host" id="host">
+                        <option value="http://127.0.0.1:8082">Local (127.0.0.1:8082)</option>
+                        <option value="http://localhost:8888">Surface (localhost:8888)</option>
+                        <option value="http://192.168.8.2:8888">Other Device</option>
+                    </select>
+                    <label for="host">LedFx Host</label>
+                </div>
+
+                <!-- Timing controls: slider + synced number box -->
+                <div class="timing-control" data-timing="ramp">
+                    <div class="timing-header">
+                        <label for="ramp-num">Ramp <span class="timing-unit">ms</span></label>
+                        <input id="ramp-num" class="form-control timing-number" type="number" min="0" max="10000"
+                            step="10" value="10">
+                    </div>
+                    <input id="ramp-range" class="form-range timing-range" type="range" min="0" max="5000" step="10"
+                        value="10">
+                </div>
+
+                <div class="timing-control" data-timing="hold">
+                    <div class="timing-header">
+                        <label for="hold-num">Hold <span class="timing-unit">ms</span></label>
+                        <input id="hold-num" class="form-control timing-number" type="number" min="0" max="10000"
+                            step="10" value="500">
+                    </div>
+                    <input id="hold-range" class="form-range timing-range" type="range" min="0" max="5000" step="10"
+                        value="500">
+                </div>
+
+                <div class="timing-control" data-timing="fade">
+                    <div class="timing-header">
+                        <label for="fade-num">Fade <span class="timing-unit">ms</span></label>
+                        <input id="fade-num" class="form-control timing-number" type="number" min="0" max="10000"
+                            step="10" value="100">
+                    </div>
+                    <input id="fade-range" class="form-range timing-range" type="range" min="0" max="5000" step="10"
+                        value="100">
+                </div>
+
+                <!-- BPM -> Hold presets -->
+                <div class="bpm-control">
+                    <div class="timing-header">
+                        <label for="bpm-num">BPM <span class="timing-unit">&rarr; hold</span></label>
+                        <input id="bpm-num" class="form-control timing-number" type="number" min="1" max="999"
+                            step="1" value="120">
+                    </div>
+                    <div class="tap-row">
+                        <button id="tap-tempo" class="btn btn-outline-secondary btn-sm" type="button">Tap</button>
+                        <span id="tap-beat" class="tap-beat" aria-hidden="true"></span>
+                    </div>
+                    <div id="bpm-presets" class="bpm-presets"></div>
+                </div>
+
+                <!-- Arbitrary color picker + flash -->
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    <input id="color" class="form-control form-control-color" type="color" value="#ffffff"
+                        title="Pick a custom color">
+                    <button id="flash-custom" class="btn btn-primary flex-grow-1" type="button">Flash custom</button>
+                </div>
+
+                <!-- Clear all oneshots (PUT) -->
+                <button id="clear-oneshots" class="btn btn-outline-warning w-100 mt-2" type="button">Clear all
+                    oneshots</button>
+
+                <!-- Status -->
+                <div id="status" class="status-box mt-3" role="status" aria-live="polite">
+                    Ready.
+                </div>
+            </div>
+
+            <!-- Color grid -->
+            <div class="col-lg-8 col-md-7 col-12">
+                <div id="color-grid" class="color-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/custom.js"></script>
+    <script src="bootstrap/js/bootstrap.js"></script>
+</body>
+
+</html>

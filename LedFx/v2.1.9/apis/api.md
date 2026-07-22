@@ -1,0 +1,1297 @@
+# REST API
+
+The REST APIs are undergoing active development, so some of the below
+APIs may change in time. APIs marked as (upcoming) are yet to be added.
+
+## /api/info
+
+Information about LedFx
+
+**GET**
+
+Returns basic information about the LedFx instance as JSON, including a `features` object indicating which optional capabilities are available on this backend.
+
+``` json
+{
+  "url": "http://127.0.0.1:8888",
+  "name": "LedFx Controller",
+  "version": "2.1.5",
+  "github_sha": "unknown",
+  "is_release": "false",
+  "developer_mode": false,
+  "features": {
+    "sendspin": true
+  }
+}
+```
+
+### Features
+
+The `features` object provides boolean flags for optional backend capabilities that may not be available in all environments. Frontends should query this on startup to conditionally show or hide UI sections.
+
+| Feature | Description | Requirement |
+|---------|-------------|-------------|
+| `sendspin` | Sendspin synchronized multi-room audio integration | Python 3.12+ and `aiosendspin` package |
+
+When a feature is `false`, the corresponding API endpoints will return error responses and the frontend should hide the related UI.
+
+## /api/config
+
+Endpoint for managing LedFx Configuration
+
+**GET**
+
+Returns the current configuration for LedFx as JSON A GET with no
+request body will return LedFx\'s full configuration.
+
+You may instead ask for any number of the config keys:
+
+-   *host*
+-   *port*
+-   *port_s*
+-   *dev_mode*
+-   *configuration_version*
+-   *scan_on_startup*
+-   *visualisation_fps*
+-   *visualisation_maxlen*
+-   *audio*
+-   *melbanks*
+-   *wled_preferences*
+-   *devices*
+-   *virtuals*
+-   *integrations*
+-   *scenes*
+-   *user_presets*
+-   *ledfx_presets*
+-   *flush_on_deactivate*
+
+example: Get LedFx audio configuration
+
+``` json
+"audio"
+```
+
+example: Get LedFx audio, devices, and scenes configuration
+
+``` json
+["audio", "devices", "scenes"]
+```
+
+**PUT**
+
+Updates LedFx configuration with any permitted keys. LedFx will handle
+the update and restart if necessary. Generally, updating any core config
+key will trigger a restart.
+
+example:
+
+``` json
+{
+  "audio": {
+    "min_volume": 0.3
+  },
+  "dev_mode": true,
+  "visualisation_fps": 50,
+  "port": 8080
+}
+```
+
+**POST**
+
+Set full LedFx config. You must provide a full, valid config. LedFx will
+restart to apply the config. To simply update a part of the config, use
+PUT
+
+**DELETE**
+
+Resets LedFx\'s config to default values and restarts.
+
+*Warning* This will irreversibly delete all your devices, settings, etc.
+
+## /api/log
+
+LedFx Logging
+
+**GET**
+
+Opens a websocket connection through which realtime LedFx logging info
+will be sent.
+
+## /api/audio/devices
+
+Query and manage audio input devices
+
+**GET**
+
+Returns a list of all available audio input devices and the currently active device index.
+
+**Note:** The device list is automatically refreshed when the system detects audio device changes (devices added/removed). When an `audio_device_list_changed` WebSocket event is received, calling this endpoint will return the updated device list.
+
+example response:
+
+``` json
+{
+  "status": "success",
+  "active_device_index": 1,
+  "devices": {
+    "0": "Microsoft Sound Mapper - Input",
+    "1": "Microphone (Realtek High Definition Audio)",
+    "2": "Stereo Mix (Realtek High Definition Audio)"
+  }
+}
+```
+
+**PUT**
+
+Set the audio input device to use for audio processing.
+
+Request body must contain the `audio_device` key with a valid device index.
+
+example request:
+
+``` json
+{
+  "audio_device": 2
+}
+```
+
+Returns success if the device was successfully set:
+
+``` json
+{
+  "status": "success"
+}
+```
+
+Returns an error if an invalid device index is provided:
+
+``` json
+{
+  "status": "failed",
+  "reason": "Invalid device index [99]"
+}
+```
+
+## /api/schema/
+
+LedFx Schema Api
+
+**GET /api/schema/**
+
+Get JSON schemas specifically defining the kind of data LedFx\'s API
+expects. A GET with no request body will return all of LedFx\'s schemas
+LedFx uses schemas to validate the following:
+
+-   *devices*
+-   *effects*
+-   *integrations*
+-   *virtuals*
+-   *audio*
+-   *melbanks*
+-   *wled_preferences*
+-   *core*
+
+Like with the /api/config endpoint, you may instead ask for spefific
+schemas
+
+example: Get LedFx audio schema
+
+``` json
+"audio"
+```
+
+example: Get LedFx devices and effects schema
+
+``` json
+["devices", "effects"]
+```
+
+## /api/schema/\<schema_type\>
+
+Query a specific LedFx schema with the matching *schema_type* as JSON
+
+**GET /api/schema/\<schema_type\>**
+
+Returns the LedFx schema with the matching *schema_type* as JSON
+
+-   *devices*: Returns all the devices registered with LedFx
+-   *effects*: Returns all the valid schemas for an LedFx effect
+-   *integrations*: Returns all the integrations registered with LedFx
+
+## /api/devices
+
+Query and manage devices connected to LedFx
+
+**GET**
+
+Get configuration of all devices
+
+**POST**
+
+Adds a new device to LedFx based on the provided JSON configuration
+
+## /api/devices/\<device_id\>
+
+Query and manage a specific device with the matching *device_id* as JSON
+
+**GET**
+
+Returns information about the device
+
+**PUT**
+
+Modifies the information pertaining to the device and returns the new
+device as JSON
+
+**DELETE**
+
+Deletes a device with the matching *device_id*
+
+## /api/find_devices
+
+Find and add all WLED devices on the LAN.
+
+**POST**
+
+For unregisted WLED devices, reads config direct from WLED remote device
+Will default the remote protocol to DDP, unless WLED device build is
+prior to DDP support, in which case it will default to UDP If device
+name has not been over ridden in WLED itself, then name will be
+generated from WLED-\<6 digits of MAC Address\> Additionally ledfx
+virtuals will be created for all virtuals defined on the WLED device
+itself
+
+Returns success as this is only a trigger action, device registration is
+handled by the back end
+
+## /api/find_launchpad
+
+**GET**
+
+Returns the name of the first Launchpad device discovered on the system
+
+example:
+
+``` json
+{
+    "status": "success",
+    "device": "Launchpad X"
+}
+```
+
+if no device is found will return an error
+
+``` json
+{
+    "status": "error",
+    "error": "Failed to find launchpad"
+}
+```
+
+## /api/find_openrgb
+
+Returns all found openRGB devices registered with the openRGB server
+
+**GET**
+
+The GET call uses default values of 127.0.0.1:6742 for the openRGB
+server
+
+**POST**
+
+JSON parameters are supported as follows:
+
+| \'\*\*server\*\*\' (optional): IP address of openRGB server, a default
+  value of 127.0.0.1 will be used
+| \'\*\*port\*\*\' (optional): Port to be used for openRGB server, a
+  default value of 6742 will be used
+
+``` json
+{
+  "server": "1.2.3.4",
+  "port": 1234
+}
+```
+
+example reponse:
+
+``` json
+{
+    "status": "success",
+    "devices": [
+        {
+            "name": "ASRock Z370 Gaming K6",
+            "type": 0,
+            "id": 0,
+            "leds": 1
+        },
+        {
+            "name": "ASUS ROG STRIX 3080 O10G V2 WHITE",
+            "type": 2,
+            "id": 1,
+            "leds": 22
+        },
+        {
+            "name": "Razer Deathadder V2",
+            "type": 6,
+            "id": 2,
+            "leds": 2
+        }
+    ]
+}
+```
+
+if no devices are found an empty array will be returned
+
+example:
+
+``` json
+{
+    "status": "success",
+    "devices": []
+}
+```
+
+if the openRGB server is not found an error will be returned
+
+example:
+
+``` json
+{
+    "status": "error",
+    "error": "timed out"
+}
+```
+
+## /api/get_nanoleaf_token
+
+**POST**
+
+REST end-point for requesting auth token from Nanoleaf. Ensure that the
+Nanoleaf controller is in pairing mode. Long press the power button on
+the controller for 5-7 seconds. White LEDs will scan back and forth to
+indicate pairing mode.
+
+Returns the auth token as a string
+
+``` json
+{
+    "auth_token":"N7knmECvfRjoBlahBlah1Gsn5K5HcxHy"
+}
+```
+
+If the Nanoleaf controller is present but not in pairing mode will
+return an error message
+
+``` json
+{
+    "error":"{ip}:{port}: Ensure Nanoleaf controller is in pairing mode"
+}
+```
+
+## /api/get_image and /api/get_gif_frames
+
+See the [Images and Cache APIs](cache.md) documentation for complete details on image retrieval endpoints, security features, and cache management.
+
+## /api/effects
+
+Query and manage all effects
+
+**GET**
+
+Returns all the effects currently created in LedFx as JSON
+
+**POST (upcoming)**
+
+Create a new Effect based on the provided JSON configuration
+
+## /api/effects/\<effect_id\>
+
+Query and manage a specific effect with the matching *effect_id* as JSON
+
+**GET**
+
+Returns information about the effect
+
+**PUT (upcoming)**
+
+Modifies the configuration of the effect and returns the new
+configuration as JSON
+
+**DELETE (upcoming)**
+
+Deletes the effect with the matching *effect_id*.
+
+## /api/colors
+
+Query and manage colors and gradients
+
+**GET**
+
+Returns all colors and gradients (both builtin and user-defined)
+
+``` json
+{
+  "colors": {
+    "builtin": {
+      "red": "#ff0000",
+      "green": "#00ff00"
+    },
+    "user": {
+      "my_custom_color": "#ff00ff"
+    }
+  },
+  "gradients": {
+    "builtin": {
+      "rainbow": "linear-gradient(...)"
+    },
+    "user": {
+      "my_gradient": "linear-gradient(...)"
+    }
+  }
+}
+```
+
+**POST**
+
+Creates or updates user-defined colors or gradients
+
+``` json
+{
+  "my_red_color": "#ff0000",
+  "my_gradient": "linear-gradient(90deg, #ff0000, #0000ff)"
+}
+```
+
+**DELETE**
+
+Deletes user-defined colors or gradients (legacy endpoint, requires JSON body)
+
+``` json
+["my_red_color", "my_gradient"]
+```
+
+## /api/colors/\<color_id\>
+
+Delete a specific color or gradient by ID
+
+**DELETE**
+
+Deletes a user-defined color or gradient with the matching *color_id*
+
+Returns success if the color/gradient was deleted, or an error if not found
+
+## /api/virtuals
+
+Query and manage virtuals connected to LedFx
+
+**GET**
+
+Get configuration of all virtuals
+
+**POST**
+
+Adds a new virtual to LedFx based on the provided JSON configuration
+
+## /api/virtuals/\<virtual_id\>
+
+Query and manage a specific virtual with the matching *virtual_id* as
+JSON
+
+**GET**
+
+Returns information about the virtual
+
+**PUT**
+
+Set a virtual to active or inactive. Must evaluate to True or False with
+python\'s bool() (eg, true, 1, ..)
+
+example:
+
+``` json
+{
+  "active": false
+}
+```
+
+**POST**
+
+Update a virtual\'s segments configuration. Format is a list of lists in
+segment order.
+
+\[\[id, start, end, invert\], \...\]
+
+id: valid device id start: first pixel on the device for this segment
+end: last pixel on the device for this segment (inclusive) invert:
+invert this segment when it is mapped onto the device
+
+example:
+
+``` json
+{
+  "segments": [
+      ["my_device", 0, 49, false],
+      ["my_other_device", 0, 99, false],
+      ["my_device", 50, 99, false]
+  ]
+}
+```
+
+This would end up with a virtual appearing on the devices as so:
+
+```
+[---first 50px of effect---][---last 50px of effect---] [---------------middle 100px of effect----------------]
+[-------------------my_device (100px)-----------------] [---------------my_other_device (100px)---------------]
+```
+
+another example:
+
+``` json
+{
+  "segments": [
+      ["my_device", 0, 9, false],
+      ["my_device", 20, 79, false],
+      ["my_device", 90, 99, false]
+  ]
+}
+```
+
+This would end up with a virtual appearing on the devices as so:
+
+```
+[ 10px ]    [------ 60px of effect ------]     [ 10px ]
+[-------------------my_device (100px)-----------------]
+```
+
+**DELETE**
+
+Deletes a virtual with the matching *virtual_id*
+
+## /api/virtuals/{virtual_id}/effects
+
+Endpoint linking virtuals to effects with the matching *virtual_id* as
+JSON
+
+**GET**
+
+Returns the active effect config of a virtual
+
+**PUT**
+
+Update the active effect config of a virtual based on the provided JSON
+configuration If config given is \"RANDOMIZE\", the active effect config
+will be automatically generated to random values
+
+**POST**
+
+Set the virtual to a new effect based on the provided JSON configuration
+
+**DELETE**
+
+Clear the active effect of a virtual
+
+### Fallback effects
+
+/api/virtuals/{virtual_id}/effects has been extended for PUT and POST
+with an optional fallback parameter
+
+\"fallback\": (true / false / seconds)
+
+If true ( 300 seconds ) or a value in float seconds, the current running
+effect on the virtual will be set as the fallback.
+
+Fallback is auto triggered by the completed scoll of texter2d with side
+scroll or the timer expiring
+
+This is intended for use cases such as temporarily displaying a track
+name before returning to the prior effect configuration.
+
+Additionally a running temporary effect can be cancelled by triggering
+the fallback via a call to /api/virtuals/{virtual_id}/fallback
+
+This can be used for interactive scenarios such as releasing a button
+that triggered the temporary effect.
+
+## /api/virtuals/{virtual_id}/fallback
+
+**GET**
+
+Cancel the temporary effect on virtual_id and force the fallback to
+trigger, removes any fallback timers
+
+Use for a button release to clear the fallback effect cycle
+
+## /api/virtuals/{virtual_id}/effects/delete
+
+**POST**
+
+Endpoint to remove a specific effect type from the virtual stored
+configurations
+
+``` json
+{
+    "type": "energy2"
+}
+```
+
+The effect contained in the param provided will be removed from the
+configuration for the virtual.
+
+If that effect type is the active effect on the virtual, the active
+effect will also be cleared.
+
+If the provide effect type is not present, no change will occur, and a
+success message will be returned.
+
+## /api/virtuals/\<virtual_id\>/presets
+
+Endpoint linking virtuals to effect presets (pre-configured effect
+configs) with the matching *virtual_id* as JSON
+
+**GET**
+
+Get preset effect configs for active effect of a virtual. The response includes an `active` flag for each preset that returns `true` if the preset's configuration exactly matches the virtual's currently active effect configuration. This allows clients to easily identify which preset (if any) is currently being displayed on the virtual.
+
+Example response for a virtual running the `singleColor` effect with the "Blue" preset active:
+
+``` json
+{
+  "status": "success",
+  "virtual": "my-virtual",
+  "effect": "singleColor",
+  "ledfx_presets": {
+    "blue": {
+      "name": "Blue",
+      "config": {
+        "color": "#0000ff",
+        "brightness": 1,
+        // ... additional effect config parameters
+      },
+      "active": true
+    },
+    "green": {
+      "name": "Green",
+      "config": {
+        "color": "#00ff00",
+        "brightness": 1,
+        // ... additional effect config parameters
+      },
+      "active": false
+    }
+  },
+  "user_presets": {
+    "my-custom-color": {
+      "name": "My Custom Color",
+      "config": {
+        "color": "#ff00ff",
+        "brightness": 1,
+        // ... additional effect config parameters
+      },
+      "active": false
+    }
+  }
+}
+```
+
+In this example, the "Blue" preset is marked `active: true` because its configuration matches what's currently playing on the virtual. The other presets are marked `active: false`.
+
+**PUT**
+
+Set active effect config of virtual to a preset
+
+``` json
+{
+  "category": "user_presets",
+  "effect_id": "wavelength",
+  "preset_id": "my_wavelength_preset"
+}
+```
+
+**POST**
+
+Save configuration of virtual\'s active effect as a custom preset for
+that effect
+
+**DELETE**
+
+Clear effect of a virtual
+
+## /api/virtuals_tools
+
+Extensible support for general tools towards ALL virtuals in one call
+
+**POST**
+
+Supports addition of oneshots to all virtuals.
+
+### oneshot
+
+Fill all active virtuals with a single color in a defined envelope of timing
+
+Intended to allow integration of instantaneous game effects over all active virtual
+
+Repeated oneshot to a virtual will add an extra oneshot if the previous ones have not finished
+
+- color: The color to which we wish to fill the virtual, any format supported, default is white
+- ramp: The time in ms over which to ramp the color from zero to full weight over the active  effect
+- hold: The time in ms to hold the color to full weight over the active effect
+- fade: The time in ms to fade the color from full weight to zero over the active effect
+- brightness: The brightness of the oneshot at the beginning. Defaults to 1.0 which is maximum brightness
+
+
+``` json
+{
+    "tool":"oneshot",
+    "color":"white",
+    "ramp":10,
+    "hold":200,
+    "fade":2000,
+    "brightness":1
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "oneshot"
+}
+```
+
+**PUT**
+
+Supports tool instances of currently only force_color and oneshot,
+others may be added in the future
+
+### force_color
+
+Move all pixels in a virtual to specific color, will be overwritten by
+active effect Use during configuration / calibration
+
+``` json
+{
+  "tool": "force_color",
+  "color": "blue"
+}
+```
+
+``` json
+{
+  "tool": "force_color",
+  "color": "#FFFFFF"
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "force_color"
+}
+```
+
+### oneshot
+
+Disables all oneshots on all virtuals. Returns success if at least one oneshot is found.
+
+``` json
+{
+    "tool":"oneshot"
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "oneshot"
+}
+```
+
+## /api/virtuals_tools/\<virtual_id\>
+
+Extensible support for general tools towards a specified virtual
+
+**POST**
+
+Supports addition of oneshots to all virtuals.
+
+### oneshot
+
+Fill the specified virtual with a single color in a defined envelope of timing
+
+Intended to allow integration of instantaneous game effects over any active virtual
+
+Repeated oneshot to a virtual will add an extra oneshot if the previous ones have not finished
+
+- color: The color to which we wish to fill the virtual, any format supported, default is white
+- ramp: The time in ms over which to ramp the color from zero to full weight over the active effect
+- hold: The time in ms to hold the color to full weight over the active effect
+- fade: The time in ms to fade the color from full weight to zero over the active effect
+- brightness: The brightness of the oneshot at the beginning. Defaults to 1.0 which is maximum brightness
+
+``` json
+{
+    "tool":"oneshot",
+    "color":"white",
+    "ramp":10,
+    "hold":200,
+    "fade":2000,
+    "brightness":1
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "oneshot"
+}
+```
+
+The virtual must be active or an error will be returned
+
+``` json
+{
+    "status": "failed",
+    "reason": "virtual falcon1 is not active"
+}
+```
+
+**PUT**
+
+Supports tool instances of force_color, calibration, highlight, oneshot
+and copy, others may be added in the future
+
+### force_color
+
+Move all pixels in a virtual to specific color, will be overwritten by
+active effect Use during configuration / calibration
+
+``` json
+{
+  "tool": "force_color",
+  "color": "blue"
+}
+```
+
+``` json
+{
+  "tool": "force_color",
+  "color": "#FFFFFF"
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "force_color"
+}
+```
+
+### calibration
+
+Force virtual into calibration mode
+
+All segments will be switched to solid color rotation of RGBCMY on the final devices
+Device backgrounds will be set to black.
+
+Changes to virtual segments in edit virtual will be displayed on browser second tab if open on devices view and physical devices live.
+
+Setting is not persistant. Shutting down ledfx while in calibration mode will leave virtual in normal effect settings in next cycle.
+
+Enter calibration mode with
+
+``` json
+{
+  "tool": "calibration",
+  "mode": "on"
+}
+```
+
+Exit calibration mode with
+
+``` json
+{
+  "tool": "calibration",
+  "mode": "off"
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "calibration"
+}
+```
+
+### highlight
+
+Highlight a segment of a virtual with white, use for editing of virtual segmentations in calibration mode
+
+Intended to highlight the last edited segment, or last reordered segment
+
+- state: defaults to true, explicity send False to turn off highlight
+- device: device id of the device which the segment is to be highlighted on, forced to lower case
+- start: index of led start on device for highlight
+- stop: index of led stop on device for highlight
+- flip: render order inversion, default to false
+
+``` json
+{
+  "tool": "highlight",
+  "device": "falcon1",
+  "start": 2019,
+  "stop": 2451,
+  "flip": true
+}
+```
+
+Disable highlight
+
+``` json
+{
+  "tool": "highlight",
+  "state": false
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "highlight"
+}
+```
+
+### oneshot
+
+Disables all oneshots on the specified virtual. Returns success if at least one oneshot is found.
+
+``` json
+{
+    "tool":"oneshot",
+    "color":"white",
+    "ramp":10,
+    "hold":200,
+    "fade":2000,
+    "brightness":1
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "oneshot"
+}
+```
+
+The virtual must be active or an error will be returned
+
+``` json
+{
+    "status": "failed",
+    "reason": "oneshot was not found"
+}
+```
+
+### copy
+
+Copy the active effect config of \<virtual_id\> to a list of other virtuals
+
+- target: A list of virtual ids to copy the active effect config to
+
+``` json
+{
+    "tool":"copy",
+    "target":["my_virtual1","my_virtual2","my_virtual3"]
+}
+```
+
+returns
+
+``` json
+{
+    "status": "success",
+    "tool": "copy"
+}
+```
+
+| The virtual must have an active or an error will be returned
+| target must be a list of virtual ids or an error will be returned
+| At least one virtual effect copy must be successful or an error will
+  be returned
+
+## /api/effects/\<effect_id\>/presets
+
+Endpoint for querying and managing presets (pre-configured effect
+configs) for each effect with the matching *effect_id* as JSON
+
+**GET**
+
+Get all presets for an effect
+
+Response includes both `ledfx_presets` (built-in, read-only) and `user_presets` (user-created, editable).
+
+**PUT**
+
+Rename a preset
+
+Request body:
+``` json
+{
+  "preset_id": "my_preset",
+  "category": "user_presets",
+  "name": "My Renamed Preset"
+}
+```
+
+**DELETE**
+
+Delete a preset
+
+Request body:
+``` json
+{
+  "preset_id": "my_preset",
+  "category": "user_presets"
+}
+```
+
+Note: Only `user_presets` can be deleted. Built-in `ledfx_presets` are read-only.
+
+## /api/effects/\<effect_id\>/presets/\<preset_id\>
+
+RESTful endpoint for deleting user presets without requiring a JSON body.
+
+**DELETE**
+
+Delete a user preset using path parameters only.
+
+Example: `DELETE /api/effects/energy/presets/my_custom_preset`
+
+This endpoint only supports deleting from `user_presets`. Built-in `ledfx_presets` cannot be deleted.
+
+Success response:
+``` json
+{
+  "status": "success"
+}
+```
+
+Error responses (all return HTTP 200):
+```
+{
+  "status": "failed",
+  "payload": {
+    "type": "error",
+    "reason": "Effect energy does not exist" |
+              "Effect energy has no user presets" |
+              "Preset my_preset does not exist for effect energy in user presets"
+  }
+}
+```
+
+## /api/scenes
+
+See [Scenes API Documentation](scenes.md) for complete details.
+
+## /api/integrations
+
+Endpoint for managing integrations. Integrations are written to allow
+ledfx to communicate with other software, and vice versa.
+
+**GET**
+
+Get info of all integrations Optional, send request body to get specific
+info of integrations Any of: \[\"id\", \"type\", \"active\", \"status\",
+\"data\", \"config\"\]
+
+example:
+
+``` json
+{
+  "info":"status"
+}
+```
+
+STATUS REFERENCE 0: disconnected 1: connected 2: disconnecting 3:
+connecting
+
+**PUT**
+
+Toggle an integration on or off
+
+example:
+
+``` json
+{
+  "id": "myqlc"
+}
+```
+
+**POST**
+
+Create a new integration, or update an existing one
+
+``` json
+{
+  "type": "qlc",
+  "config": {
+      "description": "QLC Test",
+      "ip_address": "127.0.0.1",
+      "name": "myQLC+",
+      "port": 9999
+      }
+}
+```
+
+``` json
+{
+  "type": "spotify",
+  "config": {
+      "description": "Spotify triggers for party",
+      "name": "Party Spotify"
+      }
+}
+```
+
+**DELETE**
+
+Delete an integration, erasing all its configuration and data.
+
+``` json
+{
+  "id": "myqlc"
+}
+```
+
+NOTE: This does not turn off the integration, it deletes it entirely!
+(though it will first turn off..)
+
+## /api/integrations/qlc/\<integration_id\>
+
+Endpoint for querying and managing a QLC integration.
+
+**GET**
+
+Returns info from the QLC+ integration.
+
+Specify \"info\", one of:
+`["event_types", "qlc_widgets", "qlc_listeners"]`
+
+*event_types*: retrieves a list of all the types of events and
+associated filters a qlc listener can subscribe to
+
+*qlc_widgets*: retrieves a list of all the widgets that can be modified,
+formatted as \[(ID, Type, Name),\...\] for \"type\":
+
+-   \"Buttons\" can be set to either off (0) or on (255)
+-   \"Audio Triggers\" are either off (0) or on (255)
+-   \"Sliders\" can be anywhere between 0 and 255
+
+*qlc_listeners*: retrieves a list of all of the events that QLC is
+listening to, and their associated widget value payloads
+
+``` json
+{
+  "info": "qlc_listeners"
+}
+```
+
+**PUT**
+
+Toggle a QLC+ event listener on or off, so that it will or will not send
+its payload to set QLC+ widgets
+
+``` json
+{
+  "event_type": "scene_set",
+  "event_filter": {
+      "scene_name": "My Scene"
+      }
+}
+```
+
+**POST**
+
+Add a new QLC event listener and QLC+ payload or update an existing one
+if it exists with same event_type and event_filter The \"qlc_payload\"
+is a dict of {\"widget_id\": value} that will be sent to QLC+
+
+``` json
+{
+  "event_type": "scene_set",
+  "event_filter": {
+      "scene_name": "My Scene"
+      },
+  "qlc_payload": {
+      "0":255,
+      "1":255,
+      "2":169
+      }
+}
+```
+
+**DELETE**
+
+Delete a QLC event listener, and associated payload data.
+
+``` json
+{
+  "event_type": "scene_set",
+  "event_filter": {
+      "scene_name": "My Scene"
+      }
+}
+```
+
+NOTE: This does not turn off the integration, it deletes it entirely!
+(though it will first turn off..)
+
+## /api/integrations/spotify/\<integration_id\>
+
+Endpoint for querying and managing a Spotify integration.
+
+**GET**
+
+Get all the song triggers
+
+**PUT**
+
+Update a song trigger \[TODO\]
+
+**POST**
+
+Create a new song trigger
+
+``` json
+{
+  "scene_id": "my_scene",
+  "song_id": "347956287364597",
+  "song_name": "Really Cool Song",
+  "song_position": "43764",
+}
+```
+
+**DELETE**
+
+Delete a song trigger
+
+``` json
+{
+  "trigger_id": "Really Cool Song - 43764",
+}
+```

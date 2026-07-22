@@ -1,0 +1,115 @@
+function updateHostName(value) {
+    document.getElementById("host").value = value
+}
+
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 8000 } = options;
+
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal
+    });
+    clearTimeout(id);
+
+    return response;
+}
+
+const rgba2hex = (rgba) => `#${rgba.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+\.{0,1}\d*))?\)$/).slice(1).map((n, i) => (i === 3 ? Math.round(parseFloat(n) * 255) : parseFloat(n)).toString(16).padStart(2, '0').replace('NaN', '')).join('')}`
+
+document.getElementById('oneshot').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const formData = {
+        tool: "oneshot",
+        ramp: parseInt(document.getElementById('ramp').value),
+        hold: parseInt(document.getElementById('hold').value),
+        fade: parseInt(document.getElementById('fade').value),
+        color: document.getElementById('color').value
+    };
+
+    //url = document.getElementById('host').value + "/api/virtuals_tools";
+    url = document.getElementById('host2').value + "/api/virtuals_tools";
+
+    //console.log(JSON.stringify(formData));
+
+    fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            document.getElementById('response').innerHTML = JSON.stringify(data);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+});
+
+const flashButtons = document.getElementsByClassName('flash-button');
+
+[...flashButtons].forEach(element => {
+    element.addEventListener('click', function (event) {
+        event.preventDefault();
+        style = window.getComputedStyle(element)
+        hexColor = rgba2hex(style.backgroundColor)
+
+        const formData = {
+            tool: "oneshot",
+            ramp: parseInt(document.getElementById('ramp').value),
+            hold: parseInt(document.getElementById('hold').value),
+            fade: parseInt(document.getElementById('fade').value),
+            color: hexColor
+        };
+
+        url = document.getElementById('host2').value + "/api/virtuals_tools";
+        //console.log(JSON.stringify(formData));
+
+        let responsePlaceholder = document.getElementById('response')
+
+        fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success: ' + hexColor);
+                responsePlaceholder.innerHTML = ('Success: ' + hexColor);
+                // document.getElementById('response').innerHTML = JSON.stringify(data);
+            })
+            .catch((error) => {
+                alert('Error: ' + error);
+                console.error('Error:', error);
+            });
+    });
+});
+
+const alertPlaceholder = document.getElementById('alert1')
+const appendAlert = (message, type) => {
+    const wrapper = document.createElement('div')
+    wrapper.innerHTML = [
+        `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+        `   <div>${message}</div>`,
+        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+        '</div>'
+    ].join('')
+
+    alertPlaceholder.append(wrapper)
+    alertPlaceholder.style.display = 'block'
+}
+
+const alertTrigger = document.getElementById('liveAlertBtn')
+if (alertTrigger) {
+    alertTrigger.addEventListener('click', () => {
+        appendAlert('Nice, you triggered this alert message!', 'success')
+    })
+}

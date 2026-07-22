@@ -1,0 +1,172 @@
+/* --------------------------------------------------------------------------
+   Timing controls (slider + number box)
+   -------------------------------------------------------------------------- */
+.timing-control {
+    margin-bottom: 1rem;
+}
+
+.timing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.timing-header label {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.timing-unit {
+    font-weight: 400;
+    opacity: 0.6;
+    font-size: 0.85em;
+}
+
+.timing-number {
+    width: 6.5rem;
+    text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   BPM presets
+   -------------------------------------------------------------------------- */
+.bpm-control {
+    margin-bottom: 1rem;
+}
+
+.bpm-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+}
+
+.bpm-btn {
+    flex: 1 1 0;
+    min-width: 3rem;
+    padding: 0.35rem 0.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Color grid + swatches
+   -------------------------------------------------------------------------- */
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.6rem;
+}
+
+.swatch {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    overflow: hidden;
+}
+
+.swatch:hover {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+}
+
+.swatch:active {
+    transform: scale(0.95);
+}
+
+/* Label chip: readable on any swatch color via its own backdrop */
+.swatch-label {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 0.72rem;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.swatch:hover .swatch-label {
+    opacity: 1;
+}
+
+.swatch-label small {
+    opacity: 0.75;
+    font-size: 0.9em;
+}
+
+/* --------------------------------------------------------------------------
+   Status box
+   -------------------------------------------------------------------------- */
+.status-box {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-left-width: 4px;
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.95rem;
+    min-height: 3rem;
+    background: rgba(255, 255, 255, 0.03);
+    word-break: break-word;
+}
+
+.status-meta {
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+    opacity: 0.65;
+}
+
+.status-swatch {
+    display: inline-block;
+    width: 0.9em;
+    height: 0.9em;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 3px;
+    vertical-align: -1px;
+    margin: 0 0.15em;
+}
+
+.status-ok      { border-left-color: #4caf50; }
+.status-fail    { border-left-color: #ff9800; }
+.status-error   { border-left-color: #f44336; }
+.status-pending { border-left-color: #2196f3; opacity: 0.85; }
+
+/* --------------------------------------------------------------------------
+   Tap tempo
+   -------------------------------------------------------------------------- */
+.tap-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+}
+
+.tap-beat {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2196f3;
+    opacity: 0.25;
+    display: inline-block;
+    flex: 0 0 auto;
+}
+
+.tap-beat.pulsing {
+    animation: tap-pulse 0.25s ease-out;
+}
+
+@keyframes tap-pulse {
+    0%   { transform: scale(1.7); opacity: 1; }
+    100% { transform: scale(1);   opacity: 0.25; }
+}
