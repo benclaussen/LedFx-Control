@@ -303,15 +303,17 @@ document.getElementById('bpm-num').addEventListener('input', updateBpmTooltips);
 buildBpmPresets();
 
 // ---------------------------------------------------------------------------
-// Tap tempo
+// Tap tempo (adaptive outlier gate)
 // ---------------------------------------------------------------------------
 
-const TAP_RESET_MS = 2000;  // a gap longer than this starts a fresh count
-const TAP_WINDOW   = 8;      // average over at most this many taps
-const TAP_OUTLIER  = 0.35;   // reject a tap whose interval is >35% off the running average
+const TAP_RESET_MS     = 2000;  // a gap longer than this starts a fresh count
+const TAP_WINDOW       = 8;      // average over at most this many taps
+const TAP_SIGMA        = 2.5;    // reject a tap beyond this many std-devs of the spread
+const TAP_MIN_TOL      = 0.15;   // floor on the gate, as a fraction of the mean interval
+const TAP_FALLBACK_TOL = 0.35;   // fixed relative gate until we have enough taps to measure spread
 
 let taps = [];              // accepted tap timestamps forming the current tempo
-let lastTap = null;         // timestamp of the previous physical tap (accepted or not)
+let lastTap = null;         // timestamp of the last ACCEPTED tap (grid reference)
 let pendingOutlier = null;  // a rejected tap, kept to detect a real tempo change
 
 // Average ms-per-beat across the accepted run: (last - first) / (count - 1).
@@ -319,6 +321,30 @@ let pendingOutlier = null;  // a rejected tap, kept to detect a real tempo chang
 function currentInterval() {
     if (taps.length < 2) return null;
     return (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+}
+
+// Consecutive gaps between accepted taps.
+function intervals() {
+    const d = [];
+    for (let i = 1; i < taps.length; i++) d.push(taps[i] - taps[i - 1]);
+    return d;
+}
+
+// Adaptive gate: judge a tap against how tightly the user is actually tapping.
+// With enough history, reject beyond TAP_SIGMA standard deviations (with a floor
+// so a near-perfect run doesn't become absurdly strict). Before that, fall back
+// to a fixed relative tolerance.
+function isOutlier(gap) {
+    const d = intervals();
+    if (d.length < 3) {
+        const exp = currentInterval();
+        return exp !== null && Math.abs(gap - exp) / exp > TAP_FALLBACK_TOL;
+    }
+    const mean = d.reduce((a, b) => a + b, 0) / d.length;
+    const variance = d.reduce((a, b) => a + (b - mean) ** 2, 0) / d.length;
+    const sd = Math.sqrt(variance);
+    const tol = Math.max(sd * TAP_SIGMA, mean * TAP_MIN_TOL);
+    return Math.abs(gap - mean) > tol;
 }
 
 // Flash the beat indicator (restart the CSS animation each tap).
@@ -348,27 +374,22 @@ function tapTempo() {
         pendingOutlier = null;
     }
 
-    // Once we have a running tempo, screen each new tap for outliers. The gap
-    // is measured from the previous *physical* tap so a real tempo change is
-    // detected even after a tap was ignored.
-    const expected = currentInterval();
-    if (expected !== null) {
+    // With a running tempo, screen each tap. The gap is measured from the last
+    // ACCEPTED tap, so an ignored stray doesn't drag the grid reference and the
+    // recovery tap still lands on-beat. A genuine tempo change is caught via
+    // pendingOutlier (two off-beat taps in a row).
+    if (currentInterval() !== null) {
         const gap = t - lastTap;
-        const dev = Math.abs(gap - expected) / expected;
-        if (dev > TAP_OUTLIER) {
+        if (isOutlier(gap)) {
             pulse();
             if (pendingOutlier !== null) {
-                // Two off-beat taps in a row => the tempo genuinely changed.
-                // Adopt the interval between them and keep counting.
                 const newGap = t - pendingOutlier;
                 taps = [pendingOutlier, t];
                 pendingOutlier = null;
                 lastTap = t;
                 commitBpm(newGap, 'tempo change');
             } else {
-                // A lone stray tap (double-tap / missed beat): ignore it.
-                pendingOutlier = t;
-                lastTap = t;
+                pendingOutlier = t; // ignore a lone stray; keep lastTap on the grid
                 setStatus('pending', '<strong>Tap tempo</strong> - ignored off-beat tap');
             }
             return;
