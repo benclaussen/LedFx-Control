@@ -176,3 +176,12 @@
     opacity: 0.45;
     box-shadow: 0 0 6px rgba(33, 150, 243, 0.6);
 }
+
+/* Blackout button: visible on the dark theme */
+#blackout {
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+#blackout:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+}

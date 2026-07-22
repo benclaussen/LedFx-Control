@@ -109,8 +109,15 @@ function now() {
 // Core request: POST an oneshot (the flash verb)
 // ---------------------------------------------------------------------------
 
-async function flash(color) {
-    const t = getTiming();
+async function flash(color, overrides = {}) {
+    const base = getTiming();
+    // Optional per-call timing overrides (e.g. blackout's 10s hold) that are
+    // used for THIS request only and never written back to the input fields.
+    const t = {
+        ramp: overrides.ramp != null ? clampMs(overrides.ramp) : base.ramp,
+        hold: overrides.hold != null ? clampMs(overrides.hold) : base.hold,
+        fade: overrides.fade != null ? clampMs(overrides.fade) : base.fade
+    };
     const payload = { tool: 'oneshot', color, ramp: t.ramp, hold: t.hold, fade: t.fade };
     const url = getHost() + '/api/virtuals_tools';
 
@@ -468,3 +475,17 @@ function toggleMetronome() {
 }
 
 document.getElementById('metronome').addEventListener('click', toggleMetronome);
+
+// ---------------------------------------------------------------------------
+// Blackout: one-off black oneshot with a fixed 10s hold. The hold override is
+// applied to this request only (via flash's overrides) so it never persists to
+// the hold field -- the next oneshot reads the field and overrides the blackout.
+// ---------------------------------------------------------------------------
+
+const BLACKOUT_HOLD = 10000; // ms
+
+function blackout() {
+    flash('#000000', { hold: BLACKOUT_HOLD });
+}
+
+document.getElementById('blackout').addEventListener('click', blackout);
