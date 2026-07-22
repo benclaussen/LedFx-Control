@@ -412,3 +412,59 @@ function tapTempo() {
 }
 
 document.getElementById('tap-tempo').addEventListener('click', tapTempo);
+
+// ---------------------------------------------------------------------------
+// Metronome (drift-corrected, phase-aligned to the last tap)
+// ---------------------------------------------------------------------------
+
+let metroTimer = null;
+let metroNext = 0; // absolute target time (ms) for the next beat
+
+function pnow() {
+    return (typeof performance !== 'undefined') ? performance.now() : Date.now();
+}
+
+function metroTick() {
+    pulse();
+    const bpm = getBpm();
+    if (!bpm) { stopMetronome(); return; }        // BPM cleared mid-run
+    metroNext += 60000 / bpm;                      // advance the absolute target
+    const delay = Math.max(0, metroNext - pnow()); // schedule to hit it, correcting lateness
+    metroTimer = setTimeout(metroTick, delay);
+}
+
+function startMetronome() {
+    if (metroTimer) return;
+    const bpm = getBpm();
+    if (!bpm) {
+        setStatus('fail', '<strong>Metronome</strong> - set a BPM first');
+        return;
+    }
+    const interval = 60000 / bpm;
+    const t = pnow();
+    // Phase-align to the tap grid, then wind forward to the next future beat.
+    metroNext = (lastTap !== null ? lastTap : t);
+    while (metroNext <= t) metroNext += interval;
+
+    const dot = document.getElementById('tap-beat');
+    if (dot) dot.classList.add('running');
+    const btn = document.getElementById('metronome');
+    if (btn) { btn.classList.add('active'); btn.textContent = 'Metronome ON'; }
+
+    metroTimer = setTimeout(metroTick, metroNext - t);
+    setStatus('ok', '<strong>Metronome</strong> - running at ' + bpm + ' BPM');
+}
+
+function stopMetronome() {
+    if (metroTimer) { clearTimeout(metroTimer); metroTimer = null; }
+    const dot = document.getElementById('tap-beat');
+    if (dot) dot.classList.remove('running');
+    const btn = document.getElementById('metronome');
+    if (btn) { btn.classList.remove('active'); btn.textContent = 'Metronome'; }
+}
+
+function toggleMetronome() {
+    if (metroTimer) stopMetronome(); else startMetronome();
+}
+
+document.getElementById('metronome').addEventListener('click', toggleMetronome);
