@@ -17,12 +17,10 @@
             <!-- Controls -->
             <div class="col-lg-4 col-md-5 col-12">
                 <div class="form-floating mb-3">
-                    <select class="form-select" name="host" id="host">
-                        <option value="http://127.0.0.1:8082">Local (127.0.0.1:8082)</option>
-                        <option value="http://localhost:8888">Surface (localhost:8888)</option>
-                        <option value="http://192.168.8.2:8888">Other Device</option>
-                    </select>
+                    <input class="form-control" list="host-options" id="host" name="host"
+                        placeholder="LedFx Host" value="http://127.0.0.1:8082" spellcheck="false">
                     <label for="host">LedFx Host</label>
+                    <datalist id="host-options"></datalist>
                 </div>
 
                 <!-- Timing controls: slider + synced number box -->
@@ -102,4 +100,4 @@
     <script src="bootstrap/js/bootstrap.js"></script>
 </body>
 
-</html>
+</htm

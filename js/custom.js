@@ -44,8 +44,16 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
+// Normalize a host string: assume http:// if no scheme, strip trailing slashes.
+function normalizeHost(raw) {
+    let h = (raw || '').trim();
+    if (!h) return '';
+    if (!/^https?:\/\//i.test(h)) h = 'http://' + h;
+    return h.replace(/\/+$/, '');
+}
+
 function getHost() {
-    return document.getElementById('host').value;
+    return normalizeHost(document.getElementById('host').value);
 }
 
 function clampMs(value) {
@@ -489,3 +497,54 @@ function blackout() {
 }
 
 document.getElementById('blackout').addEventListener('click', blackout);
+
+// ---------------------------------------------------------------------------
+// Host picker: built-in presets + free-form entry, remembering typed hosts.
+// A <datalist> gives autocomplete suggestions while the <input> still accepts
+// any URL, so there is no built-in-vs-custom mode to toggle.
+// ---------------------------------------------------------------------------
+
+const BUILTIN_HOSTS = [
+    { url: 'http://127.0.0.1:8082',  label: 'Local' },
+    { url: 'http://localhost:8888',  label: 'Surface' },
+    { url: 'http://192.168.8.2:8888', label: 'Other Device' }
+];
+const HOST_STORE = 'ledfx_custom_hosts';
+
+function loadCustomHosts() {
+    try { return JSON.parse(localStorage.getItem(HOST_STORE)) || []; }
+    catch (e) { return []; } // storage unavailable / not JSON
+}
+
+function saveCustomHost(url) {
+    if (!url || BUILTIN_HOSTS.some(h => h.url === url)) return;
+    const list = loadCustomHosts();
+    if (list.includes(url)) return;
+    list.push(url);
+    try { localStorage.setItem(HOST_STORE, JSON.stringify(list)); } catch (e) { /* ignore */ }
+    rebuildHostOptions();
+}
+
+function rebuildHostOptions() {
+    const dl = document.getElementById('host-options');
+    if (!dl) return;
+    dl.innerHTML = '';
+    const add = (url, label) => {
+        const o = document.createElement('option');
+        o.value = url;
+        if (label) o.label = label;
+        dl.appendChild(o);
+    };
+    BUILTIN_HOSTS.forEach(h => add(h.url, h.label));
+    loadCustomHosts().forEach(u => add(u, 'Saved'));
+}
+
+(function initHostPicker() {
+    rebuildHostOptions();
+    const host = document.getElementById('host');
+    // Normalize + remember whenever the field is committed (blur / Enter / pick).
+    host.addEventListener('change', () => {
+        const norm = normalizeHost(host.value);
+        if (norm) { host.value = norm; saveCustomHost(norm); }
+    });
+})();
