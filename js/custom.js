@@ -83,7 +83,10 @@ function setStatus(state, html) {
 }
 
 function now() {
-    return new Date().toLocaleTimeString();
+    // Force 24-hour HH:mm:ss regardless of locale (e.g. 9:01:26PM -> 21:01:26).
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +145,7 @@ async function flash(color, overrides = {}) {
         const msg = err.name === 'AbortError' ? 'Request timed out' : err.message;
         setStatus('error',
             '<strong>Network error</strong> - ' + msg +
-            '<div class="status-meta">' + color + ' &middot; ramp ' + t.ramp + ' / hold ' + t.hold + ' / fade ' + t.fade + ' &middot; ' + now() + '</div>');
+            '<div class="status-meta">' + now() + ' &middot; ' + color + ' &middot; ramp ' + t.ramp + ' / hold ' + t.hold + ' / fade ' + t.fade + '</div>');
         return;
     }
 
@@ -154,19 +157,19 @@ async function flash(color, overrides = {}) {
     } catch (e) {
         setStatus('error',
             '<strong>Bad response</strong> - HTTP ' + response.status + ', not JSON' +
-            '<div class="status-meta">' + color + ' &middot; ' + now() + '</div>');
+            '<div class="status-meta">' + now() + ' &middot; ' + color + '</div>');
         return;
     }
 
     if (data.status === 'success') {
         setStatus('ok',
             '<strong>Success</strong> <span class="status-swatch" style="background:' + color + '"></span> ' + color +
-            '<div class="status-meta">HTTP ' + response.status + ' &middot; ramp ' + t.ramp + ' / hold ' + t.hold + ' / fade ' + t.fade + ' &middot; ' + now() + '</div>');
+            '<div class="status-meta">' + now() + ' &middot; HTTP ' + response.status + ' &middot; ramp ' + t.ramp + ' / hold ' + t.hold + ' / fade ' + t.fade + '</div>');
     } else {
         const reason = data.payload && data.payload.reason ? data.payload.reason : 'unknown reason';
         setStatus('fail',
             '<strong>Failed</strong> - ' + reason +
-            '<div class="status-meta">HTTP ' + response.status + ' &middot; ' + color + ' &middot; ' + now() + '</div>');
+            '<div class="status-meta">' + now() + ' &middot; HTTP ' + response.status + ' &middot; ' + color + '</div>');
     }
 }
 
@@ -200,11 +203,11 @@ async function clearOneshots() {
     }
 
     if (data.status === 'success') {
-        setStatus('ok', '<strong>Oneshots cleared</strong><div class="status-meta">HTTP ' + response.status + ' &middot; ' + now() + '</div>');
+        setStatus('ok', '<strong>Oneshots cleared</strong><div class="status-meta">' + now() + ' &middot; HTTP ' + response.status + '</div>');
     } else {
         // API returns "failed" if no active oneshot was found to disable.
         const reason = data.payload && data.payload.reason ? data.payload.reason : (data.reason || 'no oneshots to clear');
-        setStatus('fail', '<strong>Nothing cleared</strong> - ' + reason + '<div class="status-meta">HTTP ' + response.status + ' &middot; ' + now() + '</div>');
+        setStatus('fail', '<strong>Nothing cleared</strong> - ' + reason + '<div class="status-meta">' + now() + ' &middot; HTTP ' + response.status + '</div>');
     }
 }
 
