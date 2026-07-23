@@ -9,8 +9,6 @@ Beyond simple color flashes it adds musical timing tools: BPM-based note
 presets, an adaptive tap-tempo, a free-running metronome, and a one-shot
 blackout.
 
----
-
 ## Requirements
 
 - A running **LedFx** instance reachable from your browser (default
