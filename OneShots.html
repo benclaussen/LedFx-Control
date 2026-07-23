@@ -76,12 +76,11 @@
                     <button id="flash-custom" class="btn btn-primary flex-grow-1" type="button">Flash custom</button>
                 </div>
 
-                <!-- Clear all oneshots (PUT) -->
-                <button id="clear-oneshots" class="btn btn-outline-warning w-100 mt-2" type="button">Clear all
-                    oneshots</button>
-
-                <!-- Blackout: one-off 10s black oneshot (does not change the hold field) -->
-                <button id="blackout" class="btn btn-primary w-100 mt-2" type="button">Blackout (10s)</button>
+                <!-- Clear + Blackout, side by side, double height -->
+                <div class="d-flex gap-2 mt-2">
+                    <button id="clear-oneshots" class="btn btn-outline-warning flex-fill action-tall" type="button">Clear all oneshots</button>
+                    <button id="blackout" class="btn btn-primary flex-fill action-tall" type="button">Blackout (10s)</button>
+                </div>
 
                 <!-- Status -->
                 <div id="status" class="status-box mt-3" role="status" aria-live="polite">
@@ -100,4 +99,4 @@
     <script src="bootstrap/js/bootstrap.js"></script>
 </body>
 
-</html>
+</htm

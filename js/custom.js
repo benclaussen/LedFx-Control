@@ -259,7 +259,8 @@ const NOTE_PRESETS = [
     { name: '1/2',  beats: 2 },     // half
     { name: '1/4',  beats: 1 },     // quarter (1 beat)
     { name: '1/8',  beats: 0.5 },   // eighth
-    { name: '1/16', beats: 0.25 }   // sixteenth
+    { name: '1/16', beats: 0.25 },  // sixteenth
+    { name: '1/32', beats: 0.125 }  // thirty-second
 ];
 
 // 60000 ms per minute / bpm = ms per beat (quarter note); scale by note length.
